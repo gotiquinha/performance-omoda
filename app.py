@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
-import locale
 
 # Configuração da página
 st.set_page_config(
@@ -12,16 +11,28 @@ st.set_page_config(
     layout="wide"
 )
 
-# Configuração do locale para formatação de valores monetários
-locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-
 # Função para formatar valores monetários
 def format_currency(value):
     if pd.isna(value):
         return "R$ 0,00"
     # Formata com duas casas decimais e separador de milhares
-    formatted = f"{float(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    return f"R$ {formatted}"
+    try:
+        value = float(value)
+        integer_part = int(value)
+        decimal_part = int((value - integer_part) * 100)
+        
+        # Formata parte inteira com pontos como separadores de milhar
+        str_integer = str(integer_part)
+        groups = []
+        for i in range(len(str_integer)-1, -1, -3):
+            start = max(0, i-2)
+            groups.insert(0, str_integer[start:i+1])
+        formatted_integer = '.'.join(groups)
+        
+        # Combina com a parte decimal
+        return f"R$ {formatted_integer},{decimal_part:02d}"
+    except:
+        return "R$ 0,00"
 
 # Função para formatar percentuais
 def format_percentage(value):
@@ -29,7 +40,9 @@ def format_percentage(value):
         return "0,00%"
     try:
         value = float(str(value).replace('%', '').replace(',', '.'))
-        return f"{value:.2f}%".replace(".", ",")
+        integer_part = int(value)
+        decimal_part = int((value - integer_part) * 100)
+        return f"{integer_part},{decimal_part:02d}%"
     except:
         return "0,00%"
 
@@ -37,7 +50,25 @@ def format_percentage(value):
 def format_decimal(value):
     if pd.isna(value):
         return "0,00"
-    return f"{float(value):,.2f}".replace(".", ",")
+    try:
+        value = float(value)
+        integer_part = int(value)
+        decimal_part = int((value - integer_part) * 100)
+        return f"{integer_part},{decimal_part:02d}"
+    except:
+        return "0,00"
+
+# Função para formatar números inteiros
+def format_integer(value):
+    if pd.isna(value):
+        return "0"
+    try:
+        # Remove caracteres especiais e formata o número com separador de milhares
+        clean_value = str(value).replace('\xa0', '').replace(' ', '').replace('.', '')
+        num = int(clean_value)
+        return f"{num:,}".replace(",", " ")
+    except:
+        return "0"
 
 # Função para limpar strings numéricas
 def clean_numeric_string(value):
@@ -45,15 +76,6 @@ def clean_numeric_string(value):
         return '0'
     # Remove R$, espaços, caracteres especiais e troca vírgula por ponto
     return str(value).replace('R$', '').replace('\xa0', '').replace(' ', '').replace('.', '').replace(',', '.')
-
-# Função para formatar números inteiros
-def format_integer(value):
-    if pd.isna(value):
-        return "0"
-    # Remove caracteres especiais e formata o número com separador de milhares
-    clean_value = str(value).replace('\xa0', '').replace(' ', '').replace('.', '')
-    formatted = f"{int(clean_value):,}".replace(",", " ")
-    return formatted
 
 # Função para carregar e processar os dados
 @st.cache_data
