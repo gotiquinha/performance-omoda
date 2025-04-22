@@ -165,8 +165,8 @@ st.subheader("📈 Métricas Principais")
 st.markdown("""
 Estas métricas representam o desempenho geral das campanhas:
 - **Total de Leads**: Número total de contatos qualificados gerados
-- **Total Gasto em Anúncios**: Investimento total em campanhas publicitárias
-- **CPL Médio**: Custo por Lead (investimento necessário para gerar cada lead)
+- **Total Gasto em Anúncios(Google)**: Investimento total em campanhas publicitárias
+- **CPL Médio(Google)**: Custo por Lead (investimento necessário para gerar cada lead)
 """)
 
 col1, col2, col3 = st.columns(3)
@@ -283,7 +283,7 @@ fig_campanhas = px.bar(
     campanhas_metrics,
     x='Campanha',
     y='Custo/Conversão',
-    title='Custo por Conversão por Campanha',
+    title='Custo por Conversão por Campanha(Google)',
     labels={'Custo/Conversão': 'Custo por Conversão (R$)'}
 )
 
@@ -295,7 +295,7 @@ fig_campanhas.update_layout(
 st.plotly_chart(fig_campanhas, use_container_width=True)
 
 # Tabela interativa
-st.subheader("📋 Dados Detalhados por Campanha")
+st.subheader("📋 Dados Detalhados por Campanha(Google)")
 st.markdown("""
 Esta tabela apresenta os dados detalhados das campanhas do Google Ads:
 - **Impressões**: Número de vezes que o anúncio foi exibido no Google
