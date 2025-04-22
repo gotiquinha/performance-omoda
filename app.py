@@ -265,35 +265,59 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# Ranking das campanhas
-st.subheader("🏆 Ranking de Campanhas por Custo-Benefício")
+# Análise de volume das campanhas
+st.subheader("📊 Volume por Campanha (Google)")
 st.markdown("""
-Este ranking mostra o custo por conversão de cada campanha no Google Ads, permitindo identificar:
-- Campanhas mais eficientes (menor custo por conversão)
-- Oportunidades de otimização
-- Distribuição do investimento entre campanhas do Google
+Este gráfico mostra o volume de cada campanha no Google Ads, permitindo comparar:
+- **Impressões**: Alcance total da campanha
+- **Interações**: Engajamento dos usuários
+- **Conversões**: Leads gerados
 """)
 
-# Calcular métricas por campanha
-campanhas_metrics = ads_data[ads_data['Campanha'].str.contains('Total', na=False) == False].copy()
-campanhas_metrics['Custo/Conversão'] = campanhas_metrics['Custo/conv.']
-campanhas_metrics = campanhas_metrics.sort_values('Custo/Conversão')
+# Preparar dados para o gráfico de volume
+volume_data = ads_data[['Campanha', 'Impressões', 'Interações', 'Conversões']].copy()
+volume_data = volume_data[volume_data['Campanha'].str.contains('Total', na=False) == False]
 
-# Criar gráfico de barras
-fig_campanhas = px.bar(
-    campanhas_metrics,
-    x='Campanha',
-    y='Custo/Conversão',
-    title='Custo por Conversão por Campanha (Google)',
-    labels={'Custo/Conversão': 'Custo por Conversão (R$)', 'Campanha': 'Campanha do Google Ads'}
-)
+# Criar gráfico de barras agrupadas
+fig_volume = go.Figure()
 
-fig_campanhas.update_layout(
+# Adicionar barras para cada métrica
+fig_volume.add_trace(go.Bar(
+    name='Impressões',
+    x=volume_data['Campanha'],
+    y=volume_data['Impressões'],
+    text=volume_data['Impressões'].apply(format_integer),
+    textposition='auto',
+))
+
+fig_volume.add_trace(go.Bar(
+    name='Interações',
+    x=volume_data['Campanha'],
+    y=volume_data['Interações'],
+    text=volume_data['Interações'].apply(format_integer),
+    textposition='auto',
+))
+
+fig_volume.add_trace(go.Bar(
+    name='Conversões',
+    x=volume_data['Campanha'],
+    y=volume_data['Conversões'],
+    text=volume_data['Conversões'].apply(format_decimal),
+    textposition='auto',
+))
+
+# Atualizar layout
+fig_volume.update_layout(
+    title='Volume de Campanhas no Google Ads',
+    xaxis_title='Campanha',
+    yaxis_title='Quantidade',
+    barmode='group',
     xaxis_tickangle=-45,
-    showlegend=False
+    showlegend=True,
+    height=500
 )
 
-st.plotly_chart(fig_campanhas, use_container_width=True)
+st.plotly_chart(fig_volume, use_container_width=True)
 
 # Tabela interativa
 st.subheader("📋 Dados Detalhados por Campanha (Google)")
