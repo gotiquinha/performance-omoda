@@ -157,6 +157,7 @@ st.title("📊 Dashboard de Performance - Omoda")
 # Explicação do dashboard
 st.markdown("""
 Este dashboard apresenta as principais métricas de performance das campanhas de marketing digital da Omoda.
+Os dados de campanhas são provenientes do Google Ads.
 Utilize os filtros e gráficos interativos para analisar o desempenho das campanhas e tomar decisões baseadas em dados.
 """)
 
@@ -164,9 +165,9 @@ Utilize os filtros e gráficos interativos para analisar o desempenho das campan
 st.subheader("📈 Métricas Principais")
 st.markdown("""
 Estas métricas representam o desempenho geral das campanhas:
-- **Total de Leads**: Número total de contatos qualificados gerados
-- **Total Gasto em Anúncios(Google)**: Investimento total em campanhas publicitárias
-- **CPL Médio(Google)**: Custo por Lead (investimento necessário para gerar cada lead)
+- **Total de Leads**: Número total de contatos qualificados gerados através dos formulários
+- **Total Gasto em Anúncios (Google)**: Investimento total em campanhas do Google Ads
+- **CPL Médio (Google)**: Custo por Lead no Google Ads (investimento necessário para gerar cada lead)
 """)
 
 col1, col2, col3 = st.columns(3)
@@ -179,11 +180,11 @@ with col1:
 
 with col2:
     total_gasto = ads_data['Custo'].sum()
-    st.metric("Total Gasto em Anúncios", format_currency(total_gasto))
+    st.metric("Total Gasto em Anúncios (Google)", format_currency(total_gasto))
 
 with col3:
     cpl_medio = total_gasto / total_leads if total_leads > 0 else 0
-    st.metric("CPL Médio", format_currency(cpl_medio))
+    st.metric("CPL Médio (Google)", format_currency(cpl_medio))
 
 # Análise de Modelos por Região
 st.subheader("🚗 Modelos Mais Procurados por Região")
@@ -267,10 +268,10 @@ st.plotly_chart(fig, use_container_width=True)
 # Ranking das campanhas
 st.subheader("🏆 Ranking de Campanhas por Custo-Benefício")
 st.markdown("""
-Este ranking mostra o custo por conversão de cada campanha, permitindo identificar:
+Este ranking mostra o custo por conversão de cada campanha no Google Ads, permitindo identificar:
 - Campanhas mais eficientes (menor custo por conversão)
 - Oportunidades de otimização
-- Distribuição do investimento entre campanhas
+- Distribuição do investimento entre campanhas do Google
 """)
 
 # Calcular métricas por campanha
@@ -283,8 +284,8 @@ fig_campanhas = px.bar(
     campanhas_metrics,
     x='Campanha',
     y='Custo/Conversão',
-    title='Custo por Conversão por Campanha(Google)',
-    labels={'Custo/Conversão': 'Custo por Conversão (R$)'}
+    title='Custo por Conversão por Campanha (Google)',
+    labels={'Custo/Conversão': 'Custo por Conversão (R$)', 'Campanha': 'Campanha do Google Ads'}
 )
 
 fig_campanhas.update_layout(
@@ -295,7 +296,7 @@ fig_campanhas.update_layout(
 st.plotly_chart(fig_campanhas, use_container_width=True)
 
 # Tabela interativa
-st.subheader("📋 Dados Detalhados por Campanha(Google)")
+st.subheader("📋 Dados Detalhados por Campanha (Google)")
 st.markdown("""
 Esta tabela apresenta os dados detalhados das campanhas do Google Ads:
 - **Impressões**: Número de vezes que o anúncio foi exibido no Google
