@@ -297,13 +297,15 @@ st.plotly_chart(fig_campanhas, use_container_width=True)
 # Tabela interativa
 st.subheader("📋 Dados Detalhados por Campanha")
 st.markdown("""
-Esta tabela permite analisar métricas detalhadas de cada campanha:
-- **Impressões**: Número de vezes que o anúncio foi exibido
-- **Interações**: Número de cliques ou engajamentos
+Esta tabela apresenta os dados detalhados das campanhas do Google Ads:
+- **Impressões**: Número de vezes que o anúncio foi exibido no Google
+- **Interações**: Número de cliques ou engajamentos com os anúncios
 - **Taxa de interação**: Percentual de pessoas que interagiram com o anúncio
-- **Custo**: Investimento total na campanha
-- **Conversões**: Número de leads gerados
+- **Custo**: Investimento total na campanha do Google Ads
+- **Conversões**: Número de leads gerados através dos anúncios
 - **Custo/conv.**: Custo por conversão (investimento por lead)
+
+*Fonte: Relatório de Campanhas do Google Ads*
 """)
 
 # Filtros
