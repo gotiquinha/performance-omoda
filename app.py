@@ -1,0 +1,303 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime
+import locale
+
+# Configuração da página
+st.set_page_config(
+    page_title="Dashboard de Performance - Omoda",
+    page_icon="🚗",
+    layout="wide"
+)
+
+# Configuração do locale para formatação de valores monetários
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+
+# Função para formatar valores monetários
+def format_currency(value):
+    if pd.isna(value):
+        return "R$ 0,00"
+    # Formata com duas casas decimais e separador de milhares
+    formatted = f"{float(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {formatted}"
+
+# Função para formatar percentuais
+def format_percentage(value):
+    if pd.isna(value):
+        return "0,00%"
+    try:
+        value = float(str(value).replace('%', '').replace(',', '.'))
+        return f"{value:.2f}%".replace(".", ",")
+    except:
+        return "0,00%"
+
+# Função para formatar números decimais
+def format_decimal(value):
+    if pd.isna(value):
+        return "0,00"
+    return f"{float(value):,.2f}".replace(".", ",")
+
+# Função para limpar strings numéricas
+def clean_numeric_string(value):
+    if pd.isna(value):
+        return '0'
+    # Remove R$, espaços, caracteres especiais e troca vírgula por ponto
+    return str(value).replace('R$', '').replace('\xa0', '').replace(' ', '').replace('.', '').replace(',', '.')
+
+# Função para formatar números inteiros
+def format_integer(value):
+    if pd.isna(value):
+        return "0"
+    # Remove caracteres especiais e formata o número com separador de milhares
+    clean_value = str(value).replace('\xa0', '').replace(' ', '').replace('.', '')
+    formatted = f"{int(clean_value):,}".replace(",", " ")
+    return formatted
+
+# Função para carregar e processar os dados
+@st.cache_data
+def load_data():
+    # Carregar dados do Google Ads
+    ads_data = pd.read_csv('Relatório da campanha.csv', skiprows=2)
+    
+    # Carregar dados de leads
+    leads_recreio = pd.read_csv('leads-omoda-recreio.csv', sep=';')
+    leads_curitiba = pd.read_csv('leads-omoda-curitiba.csv', sep=';')
+    
+    # Adicionar coluna de origem
+    leads_recreio['origem'] = 'Recreio'
+    leads_curitiba['origem'] = 'Curitiba'
+    
+    # Combinar dados de leads
+    leads_data = pd.concat([leads_recreio, leads_curitiba], ignore_index=True)
+    
+    # Converter data
+    leads_data['criado_em'] = pd.to_datetime(leads_data['criado_em'], format='%d/%m/%Y %H:%M:%S')
+    
+    # Remover dados de teste
+    leads_data = leads_data[~leads_data['nome_cliente'].str.contains('teste', case=False, na=False)]
+    leads_data = leads_data[~leads_data['email_cliente'].str.contains('teste', case=False, na=False)]
+    
+    # Tratar dados do relatório
+    ads_data['Custo'] = ads_data['Custo'].apply(clean_numeric_string).astype(float)
+    ads_data['Custo/conv.'] = ads_data['Custo/conv.'].apply(clean_numeric_string).astype(float)
+    ads_data['Conversões'] = ads_data['Conversões'].apply(clean_numeric_string).astype(float)
+    
+    # Remover linhas sem nome de campanha ou com 'Total'
+    ads_data = ads_data[
+        ads_data['Campanha'].notna() & 
+        (ads_data['Campanha'] != 'None') & 
+        ~ads_data['Campanha'].str.contains('Total', na=False)
+    ]
+    
+    return ads_data, leads_data
+
+# Carregar dados
+ads_data, leads_data = load_data()
+
+# Título do dashboard
+st.title("📊 Dashboard de Performance - Omoda")
+
+# Explicação do dashboard
+st.markdown("""
+Este dashboard apresenta as principais métricas de performance das campanhas de marketing digital da Omoda.
+Utilize os filtros e gráficos interativos para analisar o desempenho das campanhas e tomar decisões baseadas em dados.
+""")
+
+# Métricas principais
+st.subheader("📈 Métricas Principais")
+st.markdown("""
+Estas métricas representam o desempenho geral das campanhas:
+- **Total de Leads**: Número total de contatos qualificados gerados
+- **Total Gasto em Anúncios**: Investimento total em campanhas publicitárias
+- **CPL Médio**: Custo por Lead (investimento necessário para gerar cada lead)
+""")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    total_leads = len(leads_data)
+    st.metric("Total de Leads Qualificados", 
+             f"{total_leads:,}".replace(",", "."),
+             help="Número total de leads que preencheram formulários nos sites da Omoda e Jaecoo")
+
+with col2:
+    total_gasto = ads_data['Custo'].sum()
+    st.metric("Total Gasto em Anúncios", format_currency(total_gasto))
+
+with col3:
+    cpl_medio = total_gasto / total_leads if total_leads > 0 else 0
+    st.metric("CPL Médio", format_currency(cpl_medio))
+
+# Análise de Modelos por Região
+st.subheader("🚗 Modelos Mais Procurados por Região")
+st.markdown("""
+Esta análise mostra a distribuição de interesse entre os modelos Omoda e Jaecoo em cada região:
+""")
+
+# Função para identificar o modelo específico
+def get_modelo_from_versao(versao):
+    if pd.isna(versao):
+        return "Não especificado"
+    versao = versao.lower()
+    if 'omoda e5' in versao or 'omoda' in versao:
+        return 'Omoda E5'
+    elif 'jaecoo j7' in versao or 'jaecoo' in versao:
+        return 'Jaecoo J7'
+    return "Não especificado"
+
+leads_data['modelo_principal'] = leads_data['versao'].apply(get_modelo_from_versao)
+
+# Criar gráfico de modelos por região
+modelos_regiao = leads_data.groupby(['origem', 'modelo_principal']).size().reset_index(name='quantidade')
+modelos_regiao = modelos_regiao[modelos_regiao['modelo_principal'] != "Não especificado"]
+
+fig_modelos = px.bar(
+    modelos_regiao,
+    x='origem',
+    y='quantidade',
+    color='modelo_principal',
+    title='Interesse por Modelo em Cada Região',
+    labels={
+        'origem': 'Região',
+        'quantidade': 'Número de Leads',
+        'modelo_principal': 'Modelo do Veículo'
+    },
+    barmode='group',
+    color_discrete_map={
+        'Omoda E5': '#1f77b4',
+        'Jaecoo J7': '#ff7f0e'
+    }
+)
+
+fig_modelos.update_layout(
+    xaxis_title="Região",
+    yaxis_title="Número de Leads",
+    legend_title="Modelo do Veículo"
+)
+
+st.plotly_chart(fig_modelos, use_container_width=True)
+
+# Gráfico de leads por dia
+st.subheader("📊 Evolução Diária de Leads")
+st.markdown("""
+Este gráfico mostra a evolução do número de leads ao longo do tempo, permitindo identificar:
+- Tendências de crescimento ou queda
+- Picos de performance
+- Sazonalidade na geração de leads
+""")
+
+# Agrupar leads por dia
+leads_por_dia = leads_data.groupby(leads_data['criado_em'].dt.date).size().reset_index(name='leads')
+
+# Criar gráfico
+fig = go.Figure()
+fig.add_trace(go.Scatter(
+    x=leads_por_dia['criado_em'],
+    y=leads_por_dia['leads'],
+    name='Leads',
+    line=dict(color='#1f77b4')
+))
+
+fig.update_layout(
+    title='Evolução Diária de Leads',
+    xaxis_title='Data',
+    yaxis_title='Quantidade de Leads',
+    hovermode='x unified'
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# Ranking das campanhas
+st.subheader("🏆 Ranking de Campanhas por Custo-Benefício")
+st.markdown("""
+Este ranking mostra o custo por conversão de cada campanha, permitindo identificar:
+- Campanhas mais eficientes (menor custo por conversão)
+- Oportunidades de otimização
+- Distribuição do investimento entre campanhas
+""")
+
+# Calcular métricas por campanha
+campanhas_metrics = ads_data[ads_data['Campanha'].str.contains('Total', na=False) == False].copy()
+campanhas_metrics['Custo/Conversão'] = campanhas_metrics['Custo/conv.']
+campanhas_metrics = campanhas_metrics.sort_values('Custo/Conversão')
+
+# Criar gráfico de barras
+fig_campanhas = px.bar(
+    campanhas_metrics,
+    x='Campanha',
+    y='Custo/Conversão',
+    title='Custo por Conversão por Campanha',
+    labels={'Custo/Conversão': 'Custo por Conversão (R$)'}
+)
+
+fig_campanhas.update_layout(
+    xaxis_tickangle=-45,
+    showlegend=False
+)
+
+st.plotly_chart(fig_campanhas, use_container_width=True)
+
+# Tabela interativa
+st.subheader("📋 Dados Detalhados por Campanha")
+st.markdown("""
+Esta tabela permite analisar métricas detalhadas de cada campanha:
+- **Impressões**: Número de vezes que o anúncio foi exibido
+- **Interações**: Número de cliques ou engajamentos
+- **Taxa de interação**: Percentual de pessoas que interagiram com o anúncio
+- **Custo**: Investimento total na campanha
+- **Conversões**: Número de leads gerados
+- **Custo/conv.**: Custo por conversão (investimento por lead)
+""")
+
+# Filtros
+col1, col2 = st.columns(2)
+
+with col1:
+    campanha_selecionada = st.selectbox(
+        "Selecione a Campanha",
+        ['Todas'] + list(ads_data['Campanha'].unique())
+    )
+
+with col2:
+    data_inicio = st.date_input(
+        "Data Inicial",
+        value=leads_data['criado_em'].min().date()
+    )
+    data_fim = st.date_input(
+        "Data Final",
+        value=leads_data['criado_em'].max().date()
+    )
+
+# Filtrar dados
+if campanha_selecionada != 'Todas':
+    dados_filtrados = ads_data[ads_data['Campanha'] == campanha_selecionada]
+else:
+    dados_filtrados = ads_data
+
+# Exibir tabela
+dados_formatados = dados_filtrados.copy()
+dados_formatados['Impressões'] = dados_formatados['Impressões'].apply(format_integer)
+dados_formatados['Interações'] = dados_formatados['Interações'].apply(format_integer)
+dados_formatados['Taxa de interação'] = dados_formatados['Taxa de interação'].apply(format_percentage)
+dados_formatados['Custo'] = dados_formatados['Custo'].apply(format_currency)
+dados_formatados['Conversões'] = dados_formatados['Conversões'].apply(format_decimal)
+dados_formatados['Custo/conv.'] = dados_formatados['Custo/conv.'].apply(format_currency)
+
+st.dataframe(
+    dados_formatados[[
+        'Campanha',
+        'Impressões',
+        'Interações',
+        'Taxa de interação',
+        'Custo',
+        'Conversões',
+        'Custo/conv.'
+    ]],
+    use_container_width=True
+)
+
+# Rodapé
+st.markdown("---")
+st.markdown("Dashboard desenvolvido para análise de performance de campanhas Omoda") 
