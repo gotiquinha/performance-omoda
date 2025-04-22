@@ -15,21 +15,25 @@ st.set_page_config(
 def format_currency(value):
     if pd.isna(value):
         return "R$ 0,00"
-    # Formata com duas casas decimais e separador de milhares
     try:
         value = float(value)
+        # Separa parte inteira e decimal
         integer_part = int(value)
-        decimal_part = int((value - integer_part) * 100)
+        decimal_part = int(round((value - integer_part) * 100))
         
         # Formata parte inteira com pontos como separadores de milhar
         str_integer = str(integer_part)
-        groups = []
+        formatted_integer = ""
         for i in range(len(str_integer)-1, -1, -3):
-            start = max(0, i-2)
-            groups.insert(0, str_integer[start:i+1])
-        formatted_integer = '.'.join(groups)
+            if i < 3:
+                formatted_integer = str_integer[0:i+1] + formatted_integer
+            else:
+                formatted_integer = "." + str_integer[i-2:i+1] + formatted_integer
         
-        # Combina com a parte decimal
+        # Remove ponto inicial se houver
+        if formatted_integer.startswith("."):
+            formatted_integer = formatted_integer[1:]
+            
         return f"R$ {formatted_integer},{decimal_part:02d}"
     except:
         return "R$ 0,00"
@@ -52,9 +56,24 @@ def format_decimal(value):
         return "0,00"
     try:
         value = float(value)
+        # Separa parte inteira e decimal
         integer_part = int(value)
-        decimal_part = int((value - integer_part) * 100)
-        return f"{integer_part},{decimal_part:02d}"
+        decimal_part = int(round((value - integer_part) * 100))
+        
+        # Formata parte inteira com pontos como separadores de milhar
+        str_integer = str(integer_part)
+        formatted_integer = ""
+        for i in range(len(str_integer)-1, -1, -3):
+            if i < 3:
+                formatted_integer = str_integer[0:i+1] + formatted_integer
+            else:
+                formatted_integer = "." + str_integer[i-2:i+1] + formatted_integer
+        
+        # Remove ponto inicial se houver
+        if formatted_integer.startswith("."):
+            formatted_integer = formatted_integer[1:]
+            
+        return f"{formatted_integer},{decimal_part:02d}"
     except:
         return "0,00"
 
@@ -63,10 +82,24 @@ def format_integer(value):
     if pd.isna(value):
         return "0"
     try:
-        # Remove caracteres especiais e formata o número com separador de milhares
+        # Remove caracteres especiais e converte para inteiro
         clean_value = str(value).replace('\xa0', '').replace(' ', '').replace('.', '')
         num = int(clean_value)
-        return f"{num:,}".replace(",", " ")
+        
+        # Formata com pontos como separadores de milhar
+        str_num = str(num)
+        formatted = ""
+        for i in range(len(str_num)-1, -1, -3):
+            if i < 3:
+                formatted = str_num[0:i+1] + formatted
+            else:
+                formatted = "." + str_num[i-2:i+1] + formatted
+        
+        # Remove ponto inicial se houver
+        if formatted.startswith("."):
+            formatted = formatted[1:]
+            
+        return formatted
     except:
         return "0"
 
